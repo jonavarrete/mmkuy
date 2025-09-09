@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiService } from '@/services/api';
 import { DeliveryRequest, DeliveryPerson } from '@/types';
@@ -13,6 +14,7 @@ import OSMMapView from '@/components/OSMMapView';
 import { Plus, Filter } from 'lucide-react-native';
 import { router } from 'expo-router';
 import * as Location from 'expo-location';
+import { useCallback } from 'react';
 
 export default function MapScreen() {
   const { user } = useAuth();
@@ -26,6 +28,28 @@ export default function MapScreen() {
     longitudeDelta: 0.0421,
   });
   const [loading, setLoading] = useState(true);
+
+  // Usar useFocusEffect para recargar datos cada vez que la pantalla recibe foco
+  useFocusEffect(
+    useCallback(() => {
+      loadMapData();
+      getCurrentLocation();
+      
+      // Si es repartidor, actualizar ubicación periódicamente
+      let locationInterval: NodeJS.Timeout;
+      if (user?.role === 'delivery') {
+        locationInterval = setInterval(() => {
+          getCurrentLocation();
+        }, 30000); // Cada 30 segundos
+      }
+      
+      return () => {
+        if (locationInterval) {
+          clearInterval(locationInterval);
+        }
+      };
+    }, [user?.role])
+  );
 
   useEffect(() => {
     loadMapData();
@@ -44,7 +68,7 @@ export default function MapScreen() {
         clearInterval(locationInterval);
       }
     };
-  }, []);
+  }, [user?.role]);
 
   const getCurrentLocation = async () => {
     try {
@@ -87,6 +111,7 @@ export default function MapScreen() {
 
   const loadMapData = async () => {
     try {
+      console.log('Cargando datos del mapa...');
       const requests = await apiService.getDeliveryRequests();
       const persons = await apiService.getAvailableDeliveryPersons();
       
@@ -97,16 +122,20 @@ export default function MapScreen() {
         setDeliveryPersons([]); // No ven repartidores disponibles
       } else if (user?.role === 'delivery') {
         // Los repartidores ven:
-        // 1. Solo puntos de RECOGIDA de entregas pendientes (disponibles)
-        // 2. Solo puntos de ENTREGA de sus entregas asignadas
-        const availableRequests = requests.filter(r => r.status === 'pending');
-        const assignedRequests = requests.filter(r => r.delivery_person_id === user.id);
+        // 1. Entregas pendientes (solo punto de recogida)
+        // 2. Sus entregas asignadas (punto de recogida y entrega)
+        const availableRequests = requests.filter(r => r.status === 'pending' && !r.delivery_person_id);
+        const assignedRequests = requests.filter(r => 
+          r.delivery_person_id === user.id && r.status !== 'delivered' && r.status !== 'cancelled'
+        );
         
-        // Combinar ambos tipos pero marcar cuáles mostrar
-        const filteredRequests = [
-          ...availableRequests.map(r => ({ ...r, showPickupOnly: true })),
-          ...assignedRequests.map(r => ({ ...r, showDeliveryOnly: true }))
-        ];
+        const filteredRequests = [...availableRequests, ...assignedRequests];
+        
+        console.log('Entregas filtradas para repartidor:', {
+          available: availableRequests.length,
+          assigned: assignedRequests.length,
+          total: filteredRequests.length
+        });
         
         setDeliveryRequests(filteredRequests);
         // No mostrar otros repartidores para evitar confusión
@@ -129,6 +158,20 @@ export default function MapScreen() {
     } else {
       // Mostrar información del repartidor
       Alert.alert('Repartidor', 'Ver perfil del repartidor');
+    }
+  };
+
+  const handleAcceptDelivery = async (deliveryId: string) => {
+    if (user?.role !== 'delivery') return;
+
+    try {
+      await apiService.acceptDeliveryRequest(deliveryId, user.id);
+      // Recargar los datos del mapa para mostrar los cambios
+      await loadMapData();
+      Alert.alert('¡Entrega aceptada!', 'La entrega ha sido asignada a ti');
+    } catch (error) {
+      console.error('Error accepting delivery:', error);
+      Alert.alert('Error', 'No se pudo aceptar la entrega');
     }
   };
 
@@ -185,6 +228,7 @@ export default function MapScreen() {
           deliveryRequests={deliveryRequests}
           deliveryPersons={deliveryPersons}
           onMarkerPress={handleMarkerPress}
+          onAcceptDelivery={handleAcceptDelivery}
           showUserLocation={true}
           currentUser={user ? { id: user.id, role: user.role } : undefined}
           userLocation={userLocation ? {

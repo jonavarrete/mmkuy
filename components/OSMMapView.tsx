@@ -13,6 +13,7 @@ interface Props {
   deliveryRequests?: (DeliveryRequest & { showPickupOnly?: boolean; showDeliveryOnly?: boolean })[];
   deliveryPersons?: DeliveryPerson[];
   onMarkerPress?: (id: string, type: 'request' | 'delivery_person') => void;
+  onAcceptDelivery?: (deliveryId: string) => void;
   showUserLocation?: boolean;
   currentUser?: {
     id: string;
@@ -36,6 +37,7 @@ export default function OSMMapView({
   deliveryRequests = [],
   deliveryPersons = [],
   onMarkerPress,
+  onAcceptDelivery,
   showUserLocation = true,
   currentUser,
   userLocation,
@@ -58,17 +60,40 @@ export default function OSMMapView({
     deliveryRequests.forEach((request) => {
       // Mostrar punto de recogida si no está marcado como "solo entrega"
       if (!request.showDeliveryOnly) {
+        // Determinar el color del marcador según el estado y si está asignado al usuario actual
+        const isAssignedToCurrentUser = request.delivery_person_id === currentUser?.id;
+        let pickupColor = '#3B82F6'; // Azul por defecto (pendiente)
+        
+        if (isAssignedToCurrentUser) {
+          // Verde para entregas asignadas al usuario actual
+          pickupColor = '#059669';
+        } else if (request.delivery_person_id && request.delivery_person_id !== currentUser?.id) {
+          // Gris para entregas asignadas a otros repartidores
+          pickupColor = '#6B7280';
+        }
+        
         markersJS += `
           L.marker([${request.pickup_lat}, ${request.pickup_lng}], {
             icon: L.divIcon({
               className: 'pickup-marker',
-              html: '<div style="background-color: #3B82F6; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3);"></div>',
+              html: '<div style="background-color: ${pickupColor}; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3); position: relative;"><div style="position: absolute; top: -2px; right: -2px; width: 8px; height: 8px; background-color: ${isAssignedToCurrentUser ? '#10B981' : 'transparent'}; border-radius: 50%; border: 1px solid white;"></div></div>',
               iconSize: [24, 24],
               iconAnchor: [12, 12]
             })
           })
           .addTo(map)
-          .bindPopup('<b>Recogida</b><br/>${request.pickup_contact_name}<br/>${request.pickup_address}<br/><small>Estado: ${STATUS_LABELS[request.status] || request.status}</small>')
+          .bindPopup(\`
+            <div>
+              <b>Recogida</b><br/>
+              ${request.pickup_contact_name}<br/>
+              ${request.pickup_address}<br/>
+              <small>Estado: ${STATUS_LABELS[request.status] || request.status}</small><br/>
+              ${request.status === 'pending' && currentUser?.role === 'delivery' && !request.delivery_person_id ? 
+                '<button onclick="acceptDelivery(\'' + request.id + '\')" style="background: #10B981; color: white; border: none; padding: 4px 8px; border-radius: 4px; margin-top: 4px; cursor: pointer;">Aceptar</button>' : 
+                ''}
+              ${isAssignedToCurrentUser ? '<br/><small style="color: #059669; font-weight: bold;">Asignado a ti</small>' : ''}
+            </div>
+          \`)
           .on('click', function() {
             window.ReactNativeWebView.postMessage(JSON.stringify({
               type: 'markerPress',
@@ -79,8 +104,8 @@ export default function OSMMapView({
         `;
       }
 
-      // Mostrar punto de entrega si no está marcado como "solo recogida"
-      if (!request.showPickupOnly) {
+      // Mostrar punto de entrega solo si está asignado al usuario actual o si es admin
+      if (!request.showPickupOnly && (request.delivery_person_id === currentUser?.id || currentUser?.role === 'admin')) {
         markersJS += `
           L.marker([${request.delivery_lat}, ${request.delivery_lng}], {
             icon: L.divIcon({
@@ -91,7 +116,14 @@ export default function OSMMapView({
             })
           })
           .addTo(map)
-          .bindPopup('<b>Entrega</b><br/>${request.delivery_contact_name}<br/>${request.delivery_address}<br/><small>Estado: ${STATUS_LABELS[request.status] || request.status}</small>')
+          .bindPopup(\`
+            <div>
+              <b>Entrega</b><br/>
+              ${request.delivery_contact_name}<br/>
+              ${request.delivery_address}<br/>
+              <small>Estado: ${STATUS_LABELS[request.status] || request.status}</small>
+            </div>
+          \`)
           .on('click', function() {
             window.ReactNativeWebView.postMessage(JSON.stringify({
               type: 'markerPress',
@@ -179,6 +211,14 @@ export default function OSMMapView({
         // Agregar marcadores
         ${generateMarkersJS()}
 
+        // Función para aceptar entrega desde el popup
+        function acceptDelivery(deliveryId) {
+          window.ReactNativeWebView.postMessage(JSON.stringify({
+            type: 'acceptDelivery',
+            deliveryId: deliveryId
+          }));
+        }
+
         // Definir etiquetas de estado para los popups
         const STATUS_LABELS = {
           pending: 'Pendiente',
@@ -227,6 +267,8 @@ export default function OSMMapView({
         setMapLoaded(true);
       } else if (data.type === 'markerPress' && onMarkerPress) {
         onMarkerPress(data.id, data.markerType);
+      } else if (data.type === 'acceptDelivery' && onAcceptDelivery) {
+        onAcceptDelivery(data.deliveryId);
       }
     } catch (error) {
       console.error('Error parsing WebView message:', error);

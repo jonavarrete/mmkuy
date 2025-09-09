@@ -7,13 +7,14 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
-import { useLocalSearchParams, router, Stack } from 'expo-router';
+import { useLocalSearchParams, router, Stack, useFocusEffect } from 'expo-router';
 import { ArrowLeft, MapPin, Package, User, Phone, Clock, CircleCheck as CheckCircle, Circle as XCircle, Truck } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiService } from '@/services/api';
 import { DeliveryRequest } from '@/types';
 import OSMMapView from '@/components/OSMMapView';
 import AuthGuard from '@/components/AuthGuard';
+import { useCallback } from 'react';
 
 const STATUS_COLORS = {
   pending: '#F59E0B',
@@ -74,7 +75,19 @@ export default function DeliveryDetailScreen() {
     try {
       const updatedDelivery = await apiService.acceptDeliveryRequest(delivery.id, user.id);
       setDelivery(updatedDelivery);
-      Alert.alert('¡Entrega aceptada!', 'La entrega ha sido asignada a ti');
+      Alert.alert('¡Entrega aceptada!', 'La entrega ha sido asignada a ti', [
+        {
+          text: 'Ver en Mapa',
+          onPress: () => {
+            // Navegar al mapa y forzar actualización
+            router.push('/(tabs)/map');
+          }
+        },
+        {
+          text: 'OK',
+          style: 'default'
+        }
+      ]);
     } catch (error) {
       Alert.alert('Error', 'No se pudo aceptar la entrega');
     }

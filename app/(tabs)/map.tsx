@@ -30,6 +30,20 @@ export default function MapScreen() {
   useEffect(() => {
     loadMapData();
     getCurrentLocation();
+    
+    // Si es repartidor, actualizar ubicación periódicamente
+    let locationInterval: NodeJS.Timeout;
+    if (user?.role === 'delivery') {
+      locationInterval = setInterval(() => {
+        getCurrentLocation();
+      }, 30000); // Cada 30 segundos
+    }
+    
+    return () => {
+      if (locationInterval) {
+        clearInterval(locationInterval);
+      }
+    };
   }, []);
 
   const getCurrentLocation = async () => {
@@ -48,6 +62,19 @@ export default function MapScreen() {
         latitudeDelta: 0.0922,
         longitudeDelta: 0.0421,
       });
+      
+      // Si es repartidor, actualizar su ubicación en el servidor
+      if (user?.role === 'delivery') {
+        try {
+          await apiService.updateDeliveryPersonLocation(
+            user.id, 
+            location.coords.latitude, 
+            location.coords.longitude
+          );
+        } catch (error) {
+          console.error('Error updating delivery person location:', error);
+        }
+      }
     } catch (error) {
       console.error('Error getting location:', error);
       Alert.alert(
@@ -69,11 +96,21 @@ export default function MapScreen() {
         setDeliveryRequests(requests.filter(r => r.user_id === user.id));
         setDeliveryPersons([]); // No ven repartidores disponibles
       } else if (user?.role === 'delivery') {
-        // Los repartidores ven solicitudes pendientes y sus propias entregas
-        setDeliveryRequests(requests.filter(r => 
-          r.status === 'pending' || r.delivery_person_id === user.id
-        ));
-        setDeliveryPersons(persons.filter(p => p.user_id !== user.id));
+        // Los repartidores ven:
+        // 1. Solo puntos de RECOGIDA de entregas pendientes (disponibles)
+        // 2. Solo puntos de ENTREGA de sus entregas asignadas
+        const availableRequests = requests.filter(r => r.status === 'pending');
+        const assignedRequests = requests.filter(r => r.delivery_person_id === user.id);
+        
+        // Combinar ambos tipos pero marcar cuáles mostrar
+        const filteredRequests = [
+          ...availableRequests.map(r => ({ ...r, showPickupOnly: true })),
+          ...assignedRequests.map(r => ({ ...r, showDeliveryOnly: true }))
+        ];
+        
+        setDeliveryRequests(filteredRequests);
+        // No mostrar otros repartidores para evitar confusión
+        setDeliveryPersons([]);
       } else {
         // Los admin ven todo
         setDeliveryRequests(requests);
@@ -149,6 +186,11 @@ export default function MapScreen() {
           deliveryPersons={deliveryPersons}
           onMarkerPress={handleMarkerPress}
           showUserLocation={true}
+          currentUser={user ? { id: user.id, role: user.role } : undefined}
+          userLocation={userLocation ? {
+            latitude: userLocation.coords.latitude,
+            longitude: userLocation.coords.longitude
+          } : undefined}
         />
       </View>
 
@@ -162,10 +204,16 @@ export default function MapScreen() {
           <View style={[styles.legendDot, { backgroundColor: '#EF4444' }]} />
           <Text style={styles.legendText}>Entrega</Text>
         </View>
-        {user?.role !== 'user' && (
+        {user?.role === 'admin' && (
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: '#10B981' }]} />
             <Text style={styles.legendText}>Repartidor</Text>
+          </View>
+        )}
+        {user?.role === 'delivery' && (
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: '#059669' }]} />
+            <Text style={styles.legendText}>Tu ubicación</Text>
           </View>
         )}
       </View>

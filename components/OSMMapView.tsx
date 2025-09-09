@@ -10,10 +10,18 @@ interface Props {
     latitudeDelta: number;
     longitudeDelta: number;
   };
-  deliveryRequests?: DeliveryRequest[];
+  deliveryRequests?: (DeliveryRequest & { showPickupOnly?: boolean; showDeliveryOnly?: boolean })[];
   deliveryPersons?: DeliveryPerson[];
   onMarkerPress?: (id: string, type: 'request' | 'delivery_person') => void;
   showUserLocation?: boolean;
+  currentUser?: {
+    id: string;
+    role: 'user' | 'delivery' | 'admin';
+  };
+  userLocation?: {
+    latitude: number;
+    longitude: number;
+  };
 }
 
 const { width, height } = Dimensions.get('window');
@@ -29,55 +37,70 @@ export default function OSMMapView({
   deliveryPersons = [],
   onMarkerPress,
   showUserLocation = true,
+  currentUser,
+  userLocation,
 }: Props) {
   const [mapLoaded, setMapLoaded] = useState(false);
 
   const generateMarkersJS = () => {
+    const STATUS_LABELS = {
+      pending: 'Pendiente',
+      accepted: 'Aceptado', 
+      picked_up: 'Recogido',
+      in_transit: 'En tránsito',
+      delivered: 'Entregado',
+      cancelled: 'Cancelado'
+    };
+      
     let markersJS = '';
 
     // Marcadores de solicitudes de entrega
     deliveryRequests.forEach((request) => {
-      // Punto de recogida (azul)
-      markersJS += `
-        L.marker([${request.pickup_lat}, ${request.pickup_lng}], {
-          icon: L.divIcon({
-            className: 'pickup-marker',
-            html: '<div style="background-color: #3B82F6; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white;"></div>',
-            iconSize: [20, 20],
-            iconAnchor: [10, 10]
+      // Mostrar punto de recogida si no está marcado como "solo entrega"
+      if (!request.showDeliveryOnly) {
+        markersJS += `
+          L.marker([${request.pickup_lat}, ${request.pickup_lng}], {
+            icon: L.divIcon({
+              className: 'pickup-marker',
+              html: '<div style="background-color: #3B82F6; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3);"></div>',
+              iconSize: [24, 24],
+              iconAnchor: [12, 12]
+            })
           })
-        })
-        .addTo(map)
-        .bindPopup('<b>Recogida</b><br/>${request.pickup_contact_name}<br/>${request.pickup_address}')
-        .on('click', function() {
-          window.ReactNativeWebView.postMessage(JSON.stringify({
-            type: 'markerPress',
-            id: '${request.id}',
-            markerType: 'request'
-          }));
-        });
-      `;
+          .addTo(map)
+          .bindPopup('<b>Recogida</b><br/>${request.pickup_contact_name}<br/>${request.pickup_address}<br/><small>Estado: ${STATUS_LABELS[request.status] || request.status}</small>')
+          .on('click', function() {
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+              type: 'markerPress',
+              id: '${request.id}',
+              markerType: 'request'
+            }));
+          });
+        `;
+      }
 
-      // Punto de entrega (rojo)
-      markersJS += `
-        L.marker([${request.delivery_lat}, ${request.delivery_lng}], {
-          icon: L.divIcon({
-            className: 'delivery-marker',
-            html: '<div style="background-color: #EF4444; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white;"></div>',
-            iconSize: [20, 20],
-            iconAnchor: [10, 10]
+      // Mostrar punto de entrega si no está marcado como "solo recogida"
+      if (!request.showPickupOnly) {
+        markersJS += `
+          L.marker([${request.delivery_lat}, ${request.delivery_lng}], {
+            icon: L.divIcon({
+              className: 'delivery-marker',
+              html: '<div style="background-color: #EF4444; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3);"></div>',
+              iconSize: [24, 24],
+              iconAnchor: [12, 12]
+            })
           })
-        })
-        .addTo(map)
-        .bindPopup('<b>Entrega</b><br/>${request.delivery_contact_name}<br/>${request.delivery_address}')
-        .on('click', function() {
-          window.ReactNativeWebView.postMessage(JSON.stringify({
-            type: 'markerPress',
-            id: '${request.id}',
-            markerType: 'request'
-          }));
-        });
-      `;
+          .addTo(map)
+          .bindPopup('<b>Entrega</b><br/>${request.delivery_contact_name}<br/>${request.delivery_address}<br/><small>Estado: ${STATUS_LABELS[request.status] || request.status}</small>')
+          .on('click', function() {
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+              type: 'markerPress',
+              id: '${request.id}',
+              markerType: 'request'
+            }));
+          });
+        `;
+      }
     });
 
     // Marcadores de repartidores (verde)
@@ -87,9 +110,9 @@ export default function OSMMapView({
           L.marker([${person.current_lat}, ${person.current_lng}], {
             icon: L.divIcon({
               className: 'delivery-person-marker',
-              html: '<div style="background-color: #10B981; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white;"></div>',
-              iconSize: [20, 20],
-              iconAnchor: [10, 10]
+              html: '<div style="background-color: #10B981; width: 28px; height: 28px; border-radius: 6px; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; font-size: 14px;">🚚</div>',
+              iconSize: [28, 28],
+              iconAnchor: [14, 14]
             })
           })
           .addTo(map)
@@ -105,6 +128,21 @@ export default function OSMMapView({
       }
     });
 
+    // Marcador del usuario actual si es repartidor y tenemos su ubicación
+    if (currentUser?.role === 'delivery' && userLocation) {
+      markersJS += `
+        L.marker([${userLocation.latitude}, ${userLocation.longitude}], {
+          icon: L.divIcon({
+            className: 'current-delivery-person-marker',
+            html: '<div style="background-color: #059669; width: 32px; height: 32px; border-radius: 8px; border: 4px solid white; box-shadow: 0 3px 12px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; font-size: 16px; animation: pulse 2s infinite;">🚛</div>',
+            iconSize: [32, 32],
+            iconAnchor: [16, 16]
+          })
+        })
+        .addTo(map)
+        .bindPopup('<b>Tu ubicación</b><br/>Repartidor activo');
+      `;
+    }
     return markersJS;
   };
 
@@ -120,6 +158,11 @@ export default function OSMMapView({
         body { margin: 0; padding: 0; }
         #map { height: 100vh; width: 100vw; }
         .leaflet-control-attribution { display: none !important; }
+        @keyframes pulse {
+          0% { transform: scale(1); }
+          50% { transform: scale(1.1); }
+          100% { transform: scale(1); }
+        }
       </style>
     </head>
     <body>
@@ -136,8 +179,18 @@ export default function OSMMapView({
         // Agregar marcadores
         ${generateMarkersJS()}
 
-        // Ubicación del usuario si está habilitada
-        ${showUserLocation ? `
+        // Definir etiquetas de estado para los popups
+        const STATUS_LABELS = {
+          pending: 'Pendiente',
+          accepted: 'Aceptado',
+          picked_up: 'Recogido',
+          in_transit: 'En tránsito',
+          delivered: 'Entregado',
+          cancelled: 'Cancelado'
+        };
+
+        // Ubicación del usuario si está habilitada y NO es repartidor (para evitar duplicados)
+        ${showUserLocation && currentUser?.role !== 'delivery' ? `
           if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(function(position) {
               var userLat = position.coords.latitude;
@@ -146,9 +199,9 @@ export default function OSMMapView({
               L.marker([userLat, userLng], {
                 icon: L.divIcon({
                   className: 'user-location-marker',
-                  html: '<div style="background-color: #2563EB; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(37, 99, 235, 0.5);"></div>',
-                  iconSize: [16, 16],
-                  iconAnchor: [8, 8]
+                  html: '<div style="background-color: #2563EB; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.6);"></div>',
+                  iconSize: [20, 20],
+                  iconAnchor: [10, 10]
                 })
               })
               .addTo(map)

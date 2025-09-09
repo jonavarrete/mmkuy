@@ -88,19 +88,15 @@ export default function OSMMapView({
               ${request.pickup_contact_name}<br/>
               ${request.pickup_address}<br/>
               <small>Estado: ${STATUS_LABELS[request.status] || request.status}</small><br/>
+             <div style="margin-top: 8px;">
+               <button onclick="viewDetails('${request.id}')" style="background: #2563EB; color: white; border: none; padding: 6px 12px; border-radius: 4px; margin-right: 8px; cursor: pointer; font-size: 12px;">Ver Detalles</button>
               ${request.status === 'pending' && currentUser?.role === 'delivery' && !request.delivery_person_id ? 
-                '<button onclick="acceptDelivery(\'' + request.id + '\')" style="background: #10B981; color: white; border: none; padding: 4px 8px; border-radius: 4px; margin-top: 4px; cursor: pointer;">Aceptar</button>' : 
+                '<button onclick="acceptDelivery(\'' + request.id + '\')" style="background: #10B981; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">Aceptar</button>' : 
                 ''}
+             </div>
               ${isAssignedToCurrentUser ? '<br/><small style="color: #059669; font-weight: bold;">Asignado a ti</small>' : ''}
             </div>
           \`)
-          .on('click', function() {
-            window.ReactNativeWebView.postMessage(JSON.stringify({
-              type: 'markerPress',
-              id: '${request.id}',
-              markerType: 'request'
-            }));
-          });
         `;
       }
 
@@ -122,15 +118,11 @@ export default function OSMMapView({
               ${request.delivery_contact_name}<br/>
               ${request.delivery_address}<br/>
               <small>Estado: ${STATUS_LABELS[request.status] || request.status}</small>
+              <div style="margin-top: 8px;">
+                <button onclick="viewDetails('${request.id}')" style="background: #2563EB; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">Ver Detalles</button>
+              </div>
             </div>
           \`)
-          .on('click', function() {
-            window.ReactNativeWebView.postMessage(JSON.stringify({
-              type: 'markerPress',
-              id: '${request.id}',
-              markerType: 'request'
-            }));
-          });
         `;
       }
     });
@@ -148,14 +140,7 @@ export default function OSMMapView({
             })
           })
           .addTo(map)
-          .bindPopup('<b>Repartidor disponible</b><br/>Rating: ${person.rating}⭐')
-          .on('click', function() {
-            window.ReactNativeWebView.postMessage(JSON.stringify({
-              type: 'markerPress',
-              id: '${person.id}',
-              markerType: 'delivery_person'
-            }));
-          });
+          .bindPopup('<b>Repartidor disponible</b><br/>Rating: ${person.rating}⭐<br/>Entregas completadas: ${person.completed_deliveries}');
         `;
       }
     });
@@ -272,8 +257,6 @@ export default function OSMMapView({
       
       if (data.type === 'mapReady') {
         setMapLoaded(true);
-      } else if (data.type === 'markerPress' && onMarkerPress) {
-        onMarkerPress(data.id, data.markerType);
       } else if (data.type === 'viewDetails' && onMarkerPress) {
         onMarkerPress(data.deliveryId, 'request');
       } else if (data.type === 'acceptDelivery' && onAcceptDelivery) {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, Dimensions } from 'react-native';
-import { MapView, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 import { DeliveryRequest, DeliveryPerson, Location } from '@/types';
 
 interface Props {
@@ -36,12 +36,14 @@ export default function CustomMapView({
   return (
     <View style={styles.container}>
       <MapView
-        provider={PROVIDER_GOOGLE}
+        provider={PROVIDER_DEFAULT}
         style={styles.map}
         region={region}
+        mapType="standard"
         showsUserLocation={showUserLocation}
         showsMyLocationButton={true}
         loadingEnabled={true}
+        customMapStyle={[]}
       >
         {/* Marcadores de solicitudes de entrega */}
         {deliveryRequests.map((request) => (
@@ -54,7 +56,7 @@ export default function CustomMapView({
               }}
               title={`Recogida - ${request.pickup_contact_name}`}
               description={request.pickup_address}
-              pinColor="blue"
+              pinColor="#3B82F6"
               onPress={() => onMarkerPress?.(request.id, 'request')}
             />
             {/* Punto de entrega */}
@@ -65,7 +67,7 @@ export default function CustomMapView({
               }}
               title={`Entrega - ${request.delivery_contact_name}`}
               description={request.delivery_address}
-              pinColor="red"
+              pinColor="#EF4444"
               onPress={() => onMarkerPress?.(request.id, 'request')}
             />
           </React.Fragment>
@@ -82,7 +84,7 @@ export default function CustomMapView({
               }}
               title="Repartidor disponible"
               description={`Rating: ${person.rating}⭐`}
-              pinColor="green"
+              pinColor="#10B981"
               onPress={() => onMarkerPress?.(person.id, 'delivery_person')}
             />
           )

@@ -9,19 +9,54 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { apiService } from '@/services/api';
 import { DeliveryRequest, DeliveryPerson } from '@/types';
-import CustomMapView from '@/components/MapView';
+import OSMMapView from '@/components/OSMMapView';
 import { Plus, Filter } from 'lucide-react-native';
 import { router } from 'expo-router';
+import * as Location from 'expo-location';
 
 export default function MapScreen() {
   const { user } = useAuth();
   const [deliveryRequests, setDeliveryRequests] = useState<DeliveryRequest[]>([]);
   const [deliveryPersons, setDeliveryPersons] = useState<DeliveryPerson[]>([]);
+  const [userLocation, setUserLocation] = useState<Location.LocationObject | null>(null);
+  const [mapRegion, setMapRegion] = useState({
+    latitude: 40.4168,
+    longitude: -3.7038,
+    latitudeDelta: 0.0922,
+    longitudeDelta: 0.0421,
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadMapData();
+    getCurrentLocation();
   }, []);
+
+  const getCurrentLocation = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        console.log('Permission to access location was denied');
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({});
+      setUserLocation(location);
+      setMapRegion({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        latitudeDelta: 0.0922,
+        longitudeDelta: 0.0421,
+      });
+    } catch (error) {
+      console.error('Error getting location:', error);
+      Alert.alert(
+        'Ubicación no disponible',
+        'No se pudo obtener tu ubicación actual. Asegúrate de que los servicios de ubicación estén activados en tu dispositivo.',
+        [{ text: 'Entendido' }]
+      );
+    }
+  };
 
   const loadMapData = async () => {
     try {
@@ -108,7 +143,8 @@ export default function MapScreen() {
 
       {/* Map */}
       <View style={styles.mapContainer}>
-        <CustomMapView
+        <OSMMapView
+          region={mapRegion}
           deliveryRequests={deliveryRequests}
           deliveryPersons={deliveryPersons}
           onMarkerPress={handleMarkerPress}

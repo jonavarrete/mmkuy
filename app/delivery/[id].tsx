@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,14 +7,34 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
-import { useLocalSearchParams, router, Stack, useFocusEffect } from 'expo-router';
-import { ArrowLeft, MapPin, Package, User, Phone, Clock, CircleCheck as CheckCircle, Circle as XCircle, Truck } from 'lucide-react-native';
+import { useLocalSearchParams, router, Stack } from 'expo-router';
+import { ArrowLeft, MapPin, Package, User, Phone, Clock } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiService } from '@/services/api';
 import { DeliveryRequest } from '@/types';
 import OSMMapView from '@/components/OSMMapView';
 import AuthGuard from '@/components/AuthGuard';
-import { useCallback } from 'react';
+
+// Componente de carga separado
+function LoadingScreen() {
+  return (
+    <View style={styles.loadingContainer}>
+      <Text style={styles.loadingText}>Cargando...</Text>
+    </View>
+  );
+}
+
+// Componente de error separado
+function ErrorScreen({ onBack }: { onBack: () => void }) {
+  return (
+    <View style={styles.errorContainer}>
+      <Text style={styles.errorText}>Entrega no encontrada</Text>
+      <TouchableOpacity onPress={onBack}>
+        <Text style={styles.backText}>Volver</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
 
 const STATUS_COLORS = {
   pending: '#F59E0B',
@@ -79,7 +99,6 @@ export default function DeliveryDetailScreen() {
         {
           text: 'Ver en Mapa',
           onPress: () => {
-            // Navegar al mapa y forzar actualización
             router.push('/(tabs)/map');
           }
         },
@@ -94,7 +113,7 @@ export default function DeliveryDetailScreen() {
   };
 
   const getActionButtons = () => {
-    if (!delivery) return null;
+    if (!delivery) return [];
 
     const buttons = [];
 
@@ -140,22 +159,11 @@ export default function DeliveryDetailScreen() {
   };
 
   if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text>Cargando...</Text>
-      </View>
-    );
+    return <LoadingScreen />;
   }
 
   if (!delivery) {
-    return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Entrega no encontrada</Text>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backText}>Volver</Text>
-        </TouchableOpacity>
-      </View>
-    );
+    return <ErrorScreen onBack={() => router.back()} />;
   }
 
   const statusColor = STATUS_COLORS[delivery.status];
@@ -164,7 +172,6 @@ export default function DeliveryDetailScreen() {
 
   return (
     <AuthGuard>
-    <>
       <Stack.Screen
         options={{
           headerShown: true,
@@ -273,7 +280,7 @@ export default function DeliveryDetailScreen() {
       </ScrollView>
 
       {/* Action Buttons */}
-      {actionButtons && actionButtons.length > 0 && (
+      {actionButtons.length > 0 && (
         <View style={styles.actionContainer}>
           {actionButtons.map((button, index) => (
             <TouchableOpacity
@@ -286,7 +293,6 @@ export default function DeliveryDetailScreen() {
           ))}
         </View>
       )}
-    </>
     </AuthGuard>
   );
 }
@@ -300,12 +306,18 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#6B7280',
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+    backgroundColor: '#F9FAFB',
   },
   errorText: {
     fontSize: 18,

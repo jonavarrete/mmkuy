@@ -1,46 +1,13 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { router, useSegments } from 'expo-router';
+import { router } from 'expo-router';
 import { AuthContextType, User } from '@/types';
 import { apiService } from '@/services/api';
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-// Hook para proteger rutas
-function useProtectedRoute(user: User | null, loading: boolean) {
-  const segments = useSegments();
-  
-  useEffect(() => {
-    if (loading) return; // No hacer nada mientras carga
-    
-    const inAuthGroup = segments[0] === '(auth)';
-    const inTabsGroup = segments[0] === '(tabs)';
-    const isRootIndex = segments.length === 0;
-    
-    console.log('useProtectedRoute - Estado:', { 
-      user: !!user, 
-      loading, 
-      segments: segments.join('/'),
-      inAuthGroup,
-      inTabsGroup,
-      isRootIndex
-    });
-    
-    if (!user) {
-      // Usuario no autenticado
-      if (!inAuthGroup && !isRootIndex) {
-        console.log('Usuario no autenticado, redirigiendo a login');
-        router.replace('/(auth)/login');
-      }
-    } else {
-      // Usuario autenticado
-      if (inAuthGroup) {
-        console.log('Usuario autenticado en auth, redirigiendo a tabs');
-        router.replace('/(tabs)');
-      }
-    }
-  }, [user, loading, segments]);
-}
+// Elimina el hook useProtectedRoute de aquí y muévelo a donde se use
+// o crea un componente wrapper separado
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -53,17 +20,13 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  
-  // Usar el hook de protección de rutas
-  useProtectedRoute(user, loading);
 
   useEffect(() => {
     loadStoredUser();
     
-    // Verificar el estado del usuario periódicamente
     const interval = setInterval(() => {
       checkUserSession();
-    }, 30000); // Cada 30 segundos
+    }, 30000);
     
     return () => clearInterval(interval);
   }, []);
@@ -90,7 +53,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const storedUser = await AsyncStorage.getItem('user');
       if (!storedUser && user) {
-        // El usuario fue eliminado del storage pero aún está en el estado
         console.log('Sesión expirada, limpiando estado');
         setUser(null);
       }
@@ -106,6 +68,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(userData);
       await AsyncStorage.setItem('user', JSON.stringify(userData));
       console.log('Sesión iniciada exitosamente');
+      
+      // Redirigir después de login exitoso
+      setTimeout(() => {
+        router.replace('/(tabs)');
+      }, 100);
     } catch (error) {
       console.error('Error en signIn:', error);
       throw error;
@@ -119,6 +86,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(userData);
       await AsyncStorage.setItem('user', JSON.stringify(userData));
       console.log('Registro exitoso');
+      
+      // Redirigir después de registro exitoso
+      setTimeout(() => {
+        router.replace('/(tabs)');
+      }, 100);
     } catch (error) {
       console.error('Error en signUp:', error);
       throw error;
@@ -131,7 +103,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await AsyncStorage.removeItem('user');
       setUser(null);
       console.log('Sesión cerrada, redirigiendo a login');
-      // Forzar redirección inmediata al login
+      
       setTimeout(() => {
         router.replace('/(auth)/login');
       }, 100);

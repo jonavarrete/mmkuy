@@ -4,14 +4,13 @@ import { useAuth } from '@/contexts/AuthContext';
 
 interface Props {
   children: React.ReactNode;
-  fallback?: React.ReactNode;
 }
 
-export default function AuthGuard({ children, fallback }: Props) {
+export default function AuthGuard({ children }: Props) {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return fallback || (
+    return (
       <View style={styles.container}>
         <Text style={styles.loadingText}>Verificando autenticación...</Text>
       </View>
@@ -19,7 +18,7 @@ export default function AuthGuard({ children, fallback }: Props) {
   }
 
   if (!user) {
-    return fallback || (
+    return (
       <View style={styles.container}>
         <Text style={styles.errorText}>Acceso no autorizado</Text>
       </View>

@@ -1,38 +1,25 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { View, StyleSheet, Text } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function IndexScreen() {
   const { user, loading } = useAuth();
-  const [shouldRedirect, setShouldRedirect] = useState(false);
 
   useEffect(() => {
-    console.log('IndexScreen - Estado:', { user: !!user, loading });
-    
     if (loading) {
-      console.log('Cargando...');
       return;
     }
 
+    // Solo redirigir si estamos en la raíz y tenemos información del usuario
     if (user) {
-      console.log('Usuario encontrado, navegando a tabs');
-      setShouldRedirect(true);
-      // Usar setTimeout para asegurar que la navegación ocurra en el próximo tick
-      setTimeout(() => {
-        router.replace('/(tabs)');
-      }, 100);
+      router.replace('/(tabs)');
     } else {
-      console.log('Usuario no encontrado, navegando a login');
-      setShouldRedirect(true);
-      // Usar setTimeout para asegurar que la navegación ocurra en el próximo tick
-      setTimeout(() => {
-        router.replace('/(auth)/login');
-      }, 100);
+      router.replace('/(auth)/login');
     }
   }, [user, loading]);
 
-  // Si estamos cargando, mostrar pantalla de carga
+  // Mostrar pantalla de carga mientras se determina el estado
   if (loading) {
     return (
       <View style={[styles.container, styles.centered]}>
@@ -41,18 +28,7 @@ export default function IndexScreen() {
     );
   }
 
-  // Si ya determinamos que hay que redirigir, mostrar pantalla de carga
-  if (shouldRedirect) {
-    return (
-      <View style={[styles.container, styles.centered]}>
-        <Text style={styles.loadingText}>
-          {user ? 'Accediendo...' : 'Redirigiendo al login...'}
-        </Text>
-      </View>
-    );
-  }
-
-  // Fallback - no debería llegar aquí
+  // Pantalla temporal mientras se procesa la redirección
   return (
     <View style={[styles.container, styles.centered]}>
       <Text style={styles.loadingText}>Iniciando...</Text>

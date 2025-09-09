@@ -14,6 +14,7 @@ import { router, Stack } from 'expo-router';
 import { MapPin, Package, User, Phone, ArrowLeft, Plus } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiService } from '@/services/api';
+import AuthGuard from '@/components/AuthGuard';
 
 export default function CreateDeliveryScreen() {
   const { user } = useAuth();
@@ -118,6 +119,7 @@ export default function CreateDeliveryScreen() {
   };
 
   return (
+    <AuthGuard>
     <>
       <Stack.Screen
         options={{
@@ -288,6 +290,7 @@ export default function CreateDeliveryScreen() {
         </View>
       </KeyboardAvoidingView>
     </>
+    </AuthGuard>
   );
 }
 

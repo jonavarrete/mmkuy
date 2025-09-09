@@ -13,6 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { apiService } from '@/services/api';
 import { DeliveryRequest } from '@/types';
 import OSMMapView from '@/components/OSMMapView';
+import AuthGuard from '@/components/AuthGuard';
 
 const STATUS_COLORS = {
   pending: '#F59E0B',
@@ -149,6 +150,7 @@ export default function DeliveryDetailScreen() {
   const actionButtons = getActionButtons();
 
   return (
+    <AuthGuard>
     <>
       <Stack.Screen
         options={{
@@ -272,6 +274,7 @@ export default function DeliveryDetailScreen() {
         </View>
       )}
     </>
+    </AuthGuard>
   );
 }
 

@@ -27,12 +27,8 @@ export default function ProfileScreen() {
           text: 'Cerrar Sesión', 
           style: 'destructive',
           onPress: async () => {
-            console.log('Iniciando logout...');
             await signOut();
-            console.log('Logout completado, navegando a root...');
-            // Usar pushAndReplace para forzar la navegación
-            router.dismissAll();
-            router.replace('/(auth)/login');
+            // El AuthContext se encargará de la redirección automáticamente
           }
         },
       ]

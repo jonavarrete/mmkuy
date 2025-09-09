@@ -29,8 +29,8 @@ const { width, height } = Dimensions.get('window');
 
 export default function OSMMapView({
   region = {
-    latitude: 40.4168,
-    longitude: -3.7038,
+    latitude: 23.1319,
+    longitude: -82.3841,
     latitudeDelta: 0.0922,
     longitudeDelta: 0.0421,
   },
@@ -142,7 +142,7 @@ export default function OSMMapView({
           L.marker([${person.current_lat}, ${person.current_lng}], {
             icon: L.divIcon({
               className: 'delivery-person-marker',
-              html: '<div style="background-color: #10B981; width: 28px; height: 28px; border-radius: 6px; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; font-size: 14px;">🚚</div>',
+              html: '<div style="background-color: #10B981; width: 28px; height: 28px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; font-size: 14px;">🚚</div>',
               iconSize: [28, 28],
               iconAnchor: [14, 14]
             })
@@ -166,7 +166,7 @@ export default function OSMMapView({
         L.marker([${userLocation.latitude}, ${userLocation.longitude}], {
           icon: L.divIcon({
             className: 'current-delivery-person-marker',
-            html: '<div style="background-color: #059669; width: 32px; height: 32px; border-radius: 8px; border: 4px solid white; box-shadow: 0 3px 12px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; font-size: 16px; animation: pulse 2s infinite;">🚛</div>',
+            html: '<div style="background-color: #059669; width: 32px; height: 32px; border-radius: 50%; border: 4px solid white; box-shadow: 0 3px 12px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; font-size: 16px; animation: pulse 2s infinite;">🚛</div>',
             iconSize: [32, 32],
             iconAnchor: [16, 16]
           })
@@ -201,7 +201,7 @@ export default function OSMMapView({
       <div id="map"></div>
       <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
       <script>
-        var map = L.map('map').setView([${region.latitude}, ${region.longitude}], 13);
+        var map = L.map('map').setView([${region.latitude}, ${region.longitude}], 14);
         
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '© OpenStreetMap contributors',
@@ -219,6 +219,13 @@ export default function OSMMapView({
           }));
         }
 
+        // Función para ver detalles desde el popup
+        function viewDetails(deliveryId) {
+          window.ReactNativeWebView.postMessage(JSON.stringify({
+            type: 'viewDetails',
+            deliveryId: deliveryId
+          }));
+        }
         // Definir etiquetas de estado para los popups
         const STATUS_LABELS = {
           pending: 'Pendiente',
@@ -267,6 +274,8 @@ export default function OSMMapView({
         setMapLoaded(true);
       } else if (data.type === 'markerPress' && onMarkerPress) {
         onMarkerPress(data.id, data.markerType);
+      } else if (data.type === 'viewDetails' && onMarkerPress) {
+        onMarkerPress(data.deliveryId, 'request');
       } else if (data.type === 'acceptDelivery' && onAcceptDelivery) {
         onAcceptDelivery(data.deliveryId);
       }

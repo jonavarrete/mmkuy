@@ -23,8 +23,8 @@ const LONGITUDE_DELTA = LATITUDE_DELTA * ASPECT_RATIO;
 
 export default function CustomMapView({
   region = {
-    latitude: 40.4168,
-    longitude: -3.7038,
+    latitude: 23.1319,
+    longitude: -82.3841,
     latitudeDelta: LATITUDE_DELTA,
     longitudeDelta: LONGITUDE_DELTA,
   },

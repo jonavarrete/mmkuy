@@ -22,8 +22,8 @@ export default function MapScreen() {
   const [deliveryPersons, setDeliveryPersons] = useState<DeliveryPerson[]>([]);
   const [userLocation, setUserLocation] = useState<Location.LocationObject | null>(null);
   const [mapRegion, setMapRegion] = useState({
-    latitude: 40.4168,
-    longitude: -3.7038,
+    latitude: 23.1319,
+    longitude: -82.3841,
     latitudeDelta: 0.0922,
     longitudeDelta: 0.0421,
   });

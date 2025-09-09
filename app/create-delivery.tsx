@@ -76,10 +76,10 @@ export default function CreateDeliveryScreen() {
     setLoading(true);
     try {
       // Simular geocodificación de direcciones
-      const pickup_lat = 40.4168 + (Math.random() - 0.5) * 0.02;
-      const pickup_lng = -3.7038 + (Math.random() - 0.5) * 0.02;
-      const delivery_lat = 40.4168 + (Math.random() - 0.5) * 0.02;
-      const delivery_lng = -3.7038 + (Math.random() - 0.5) * 0.02;
+      const pickup_lat = 23.1319 + (Math.random() - 0.5) * 0.02;
+      const pickup_lng = -82.3841 + (Math.random() - 0.5) * 0.02;
+      const delivery_lat = 23.1319 + (Math.random() - 0.5) * 0.02;
+      const delivery_lng = -82.3841 + (Math.random() - 0.5) * 0.02;
 
       const deliveryRequest = {
         user_id: user!.id,
@@ -152,7 +152,7 @@ export default function CreateDeliveryScreen() {
                 style={styles.input}
                 value={formData.pickup_address}
                 onChangeText={(value) => handleInputChange('pickup_address', value)}
-                placeholder="Ej: Calle Mayor 123, Madrid"
+                placeholder="Ej: Calle 23 y 12, Vedado, La Habana"
                 multiline
               />
             </View>
@@ -193,7 +193,7 @@ export default function CreateDeliveryScreen() {
                 style={styles.input}
                 value={formData.delivery_address}
                 onChangeText={(value) => handleInputChange('delivery_address', value)}
-                placeholder="Ej: Gran Vía 45, Madrid"
+                placeholder="Ej: Malecón 567, Centro Habana, La Habana"
                 multiline
               />
             </View>

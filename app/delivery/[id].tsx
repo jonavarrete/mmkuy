@@ -151,8 +151,31 @@ export default function DeliveryDetailScreen() {
               textStyle: styles.deliveredButtonText,
             });
             break;
+          case 'delivered':
+            // Mostrar botón para ir al chat si es necesario
+            buttons.push({
+              title: 'Chat con Cliente',
+              onPress: () => router.push(`/chat?deliveryId=${delivery.id}`),
+              style: styles.actionButton,
+              textStyle: styles.actionButtonText,
+            });
+            break;
         }
       }
+    } else if (user?.role === 'user' && delivery.status === 'delivered') {
+      // Usuario puede calificar la entrega completada
+      buttons.push({
+        title: 'Calificar Entrega',
+        onPress: () => router.push(`/rate-delivery?deliveryId=${delivery.id}&deliveryPersonName=María García`),
+        style: styles.rateButton,
+        textStyle: styles.rateButtonText,
+      });
+      buttons.push({
+        title: 'Chat con Repartidor',
+        onPress: () => router.push(`/chat?deliveryId=${delivery.id}`),
+        style: styles.actionButton,
+        textStyle: styles.actionButtonText,
+      });
     }
 
     return buttons;
@@ -468,6 +491,18 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   deliveredButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  rateButton: {
+    backgroundColor: '#F59E0B',
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  rateButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',

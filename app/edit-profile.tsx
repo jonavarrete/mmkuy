@@ -21,6 +21,8 @@ export default function EditProfileScreen() {
     name: user?.name || '',
     email: user?.email || '',
     phone: user?.phone || '',
+    vehicleType: 'motorcycle' as 'bike' | 'motorcycle' | 'car' | 'walking',
+    licensePlate: 'M-1234-AB',
   });
   const [loading, setLoading] = useState(false);
 
@@ -163,12 +165,13 @@ export default function EditProfileScreen() {
                         key={vehicle}
                         style={[
                           styles.vehicleOption,
-                          vehicle === 'motorcycle' && styles.vehicleOptionSelected
+                          formData.vehicleType === vehicle && styles.vehicleOptionSelected
                         ]}
+                        onPress={() => handleInputChange('vehicleType', vehicle)}
                       >
                         <Text style={[
                           styles.vehicleOptionText,
-                          vehicle === 'motorcycle' && styles.vehicleOptionTextSelected
+                          formData.vehicleType === vehicle && styles.vehicleOptionTextSelected
                         ]}>
                           {vehicle === 'bike' ? '🚲 Bicicleta' :
                            vehicle === 'motorcycle' ? '🏍️ Moto' :
@@ -185,7 +188,8 @@ export default function EditProfileScreen() {
                     <TextInput
                       style={styles.input}
                       placeholder="M-1234-AB"
-                      defaultValue="M-1234-AB"
+                      value={formData.licensePlate}
+                      onChangeText={(value) => handleInputChange('licensePlate', value)}
                     />
                   </View>
                 </View>

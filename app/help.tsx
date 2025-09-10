@@ -84,7 +84,7 @@ export default function HelpScreen() {
       title: 'Chat en Vivo',
       description: 'Habla con nuestro equipo de soporte',
       icon: MessageCircle,
-      action: () => Alert.alert('Chat', 'Función de chat en desarrollo'),
+      action: () => router.push('/chat?supportTicket=new'),
     },
     {
       title: 'Llamar Soporte',

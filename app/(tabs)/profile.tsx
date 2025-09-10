@@ -123,6 +123,12 @@ export default function ProfileScreen() {
           onPress: () => router.push('/settings'),
           showForRoles: ['admin'],
         },
+        {
+          icon: Settings,
+          title: 'Dashboard Admin',
+          onPress: () => router.push('/admin/dashboard'),
+          showForRoles: ['admin'],
+        },
       ],
     },
   ];
